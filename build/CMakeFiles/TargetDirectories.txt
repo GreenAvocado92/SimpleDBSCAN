@@ -1,0 +1,3 @@
+/mnt/f/github/github_test/SimpleDBSCAN/build/CMakeFiles/edit_cache.dir
+/mnt/f/github/github_test/SimpleDBSCAN/build/CMakeFiles/rebuild_cache.dir
+/mnt/f/github/github_test/SimpleDBSCAN/build/CMakeFiles/main_test.dir

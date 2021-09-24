@@ -24,6 +24,12 @@ using std::vector;
 //glog
 #include <glog/logging.h>
 
+struct kNeighborData {
+	Eigen::Vector3f point;
+	int indices;
+	float square;
+};
+
 class kNeighbor
 {
 	typedef CGAL::Simple_cartesian<double> K;
@@ -109,22 +115,24 @@ public:
 	void searchR(EigenT t, float r);
 
 	// get quary 
-	std::vector<Eigen::Vector4f> getQuary() { 
+	std::vector<kNeighborData> getQuary() { 
 		LOG_IF(INFO, quary_.size() != 0) << "get knn quary successful";
 		LOG_IF(INFO, quary_.size() == 0) << "get knn quary failed";
 		return quary_; };
-	
+
 private:
 	// 
 	size_t k_;
 
 	// store the raw point cloud
 	std::vector<Point_d> points_;
+
 	// the indices of points
 	std::vector<int> indices_;
 
 	// the result of knn or rnn
-	std::vector<Eigen::Vector4f> quary_;
+	// std::vector<Eigen::Vector4f> quary_;
+	std::vector<kNeighborData> quary_;
 
 	// kdtree
 	Tree tree_;
@@ -151,9 +159,19 @@ void kNeighbor::searchK(Point_d t, size_t k)
 
 	for (Neighbor_search::iterator it = search.begin(); it != search.end(); ++it) {
 		int indices = boost::get<1>(it->first);
-		Eigen::Vector4f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z(), indices);
+		// Eigen::Vector4f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z(), indices);
+		Eigen::Vector3f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z());
+		float distance = static_cast<float>(it->second);
+		float aa = (point(0) - t.x()) * (point(0) - t.x()) * 100000;	
+		aa += (point(1) - t.y()) * (point(1) - t.y()) * 100000;
+		aa += (point(2) - t.z()) * (point(2) - t.z()) * 100000;
 
-		quary_.push_back(point);
+		kNeighborData kData;
+		kData.indices = indices;
+		kData.square = aa;
+		kData.point = point;
+		
+		quary_.push_back(kData);
 	}
 }
 
@@ -161,14 +179,20 @@ void kNeighbor::searchR(Point_d t, float r)
 {
 	LOG(INFO) << "search R(" << r << ")nn  P(" << t << ")";
 	quary_.clear();
-
 	Neighbor_search search(tree_, t, 20);
-
 	for (Neighbor_search::iterator it = search.begin(); it != search.end(); ++it) {
 		int indices = boost::get<1>(it->first);
-		Eigen::Vector4f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z(), indices);
+		// Eigen::Vector4f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z(), indices);
+		Eigen::Vector3f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z());
 
-		if (it->second < r) quary_.push_back(point);
+		if (it->second < r) {
+			kNeighborData kData;
+			kData.indices = indices;
+			kData.square = it->second;
+			kData.point = point;
+		
+			quary_.push_back(kData);
+		}
 	}
 }
 

@@ -4,18 +4,21 @@
 #include "kNeighbor.hpp"
 #include <iostream>
 #include <string>
+#include <limits>
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/Point_set_3.h>
 #include <CGAL/IO/read_points.h>
 #include <CGAL/IO/io.h>
+#include <glog/logging.h>
 
 class Dbscan {
     typedef CGAL::Simple_cartesian<double> K;
 	typedef K::Point_3 Point_3;
     typedef CGAL::Point_set_3<Point_3> Point_set;
+
 public:
-    Dbscan();
-    ~Dbscan();
+    // Dbscan();
+    // ~Dbscan();
 
     /**
     * @brief set input data
@@ -27,6 +30,8 @@ public:
     void set_minpts(int pts) {min_pts_ = pts;};
 
     bool compute();
+
+    bool save_clusters(int minsize);
 
 private:
     Point_set points_;
@@ -45,34 +50,51 @@ private:
     kNeighbor ksearch_;
 
     // eps && min_pts
-    float eps_;
-    int min_pts_;
+    float eps_ = 15.0;
+    int min_pts_ = 10;
 
     // expand cluster
     bool expand_cluster(const Point_3 &target, std::vector<Point_3> &cluster);
 };
 
+bool Dbscan::save_clusters(int minsize = std::numeric_limits<int>::min()) {
+    std::string output_file = "";
+    for (int i = 0; i < clusters_.size(); ++i) {
+        output_file = "cs/" + std::to_string(i) + "_.asc";
+        std::vector<Point_3> temp = clusters_[i];
+        if (temp.size() > minsize) {
+            std::ofstream out(output_file);
+            for (int j = 0; j < temp.size(); j++)
+                out << temp[j].x() << " " << temp[j].y() << " "  << temp[j].z() << std::endl;
+            out.close();
+        }        
+    }
+    return true;
+}
+
 bool Dbscan::expand_cluster(const Point_3 &target, std::vector<Point_3> &cluster) {
     ksearch_.searchK(Eigen::Vector3f(target.x(),target.y(),target.z()), min_pts_);
-    std::vector<Eigen::Vector4f> knn = ksearch_.getQuary();
+    std::vector<kNeighborData> knn = ksearch_.getQuary();
+
     if (knn.size() == 1) {
-        flag_[knn[0](3)] = 0;
+        flag_[knn[0].indices] = 0;
         return false;
     }
-    if (knn[knn.size() - 1](3) > eps_)
-        return false; 
+    if (knn[knn.size() - 1].square > eps_)
+        return false;
     cluster.push_back(target);
-    flag_[knn[0](3)] = 1;
+    flag_[knn[0].indices] = 1;
     for (auto it : knn) {
-        if (flag_[it(3)] == -1) {
-            const Point_3 t(it.x(), it.y(), it.z());
+        if (flag_[it.indices] == -1) {
+            const Point_3 t(it.point(0), it.point(1), it.point(2));
             expand_cluster(t, cluster);
-        } 
+        }
     }
     return true;
 }
 
 bool Dbscan::compute() {
+    // construct a kdtree
     for (int i = 0; i < points_.size(); ++i) {
         if (flag_[i] == -1) {
             std::vector<Point_3> cluster(0);
@@ -86,7 +108,16 @@ bool Dbscan::compute() {
 bool Dbscan::set_input_points(std::string input_path) {
     
     CGAL::IO::read_XYZ(input_path, points_);
-    
+    std::vector<Eigen::Vector3f> data;
+    for (int i = 0; i < points_.size(); ++i) {
+        Eigen::Vector3f t = Eigen::Vector3f::Zero();
+        t(0) = points_.point(i).x();
+        t(1) = points_.point(i).y();
+        t(2) = points_.point(i).z();
+        data.push_back(t);
+    } 
+    ksearch_.setInputData(data);
+
     // add marked flag
     flag_.resize(points_.size(), -1);
 
