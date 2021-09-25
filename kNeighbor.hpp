@@ -103,6 +103,13 @@ public:
 		build_tree_();
 	}
 
+	void setInputData(std::vector<Point_d> points) {
+		points_ = points;
+		k_ = 1;
+
+		build_tree_();
+	}
+
 	// search knn
 	void searchK(Point_d t, size_t k);
 	
@@ -182,7 +189,6 @@ void kNeighbor::searchR(Point_d t, float r)
 	Neighbor_search search(tree_, t, 20);
 	for (Neighbor_search::iterator it = search.begin(); it != search.end(); ++it) {
 		int indices = boost::get<1>(it->first);
-		// Eigen::Vector4f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z(), indices);
 		Eigen::Vector3f point(boost::get<0>(it->first).x(), boost::get<0>(it->first).y(), boost::get<0>(it->first).z());
 
 		if (it->second < r) {

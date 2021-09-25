@@ -4,6 +4,8 @@
 using std::cout;
 using std::endl;
 
+// @ TODO add gflag
+
 int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = false;
@@ -15,7 +17,7 @@ int main(int argc, char **argv) {
     db.set_input_points(input_path);
     db.compute();
 
-    db.save_clusters(5000);
+    db.save_clusters("cc", 5000);
 
     return 0;
 }

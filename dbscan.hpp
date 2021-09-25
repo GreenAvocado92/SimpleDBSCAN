@@ -17,8 +17,12 @@ class Dbscan {
     typedef CGAL::Point_set_3<Point_3> Point_set;
 
 public:
-    // Dbscan();
-    // ~Dbscan();
+    Dbscan() {
+        LOG(INFO) << "Init Dbscan";
+        points_.clear();
+        flag_.clear();
+    };
+    ~Dbscan() {};
 
     /**
     * @brief set input data
@@ -31,7 +35,18 @@ public:
 
     bool compute();
 
-    bool save_clusters(int minsize);
+    /**
+     * @brief save files
+     * 
+     * @param minsize 
+     * @return true 
+     * @return false 
+     */
+    bool save_clusters(std::string path, int minsize);
+
+    std::vector<std::vector<Point_3>> get_clusters() {
+        return clusters_;
+    };
 
 private:
     Point_set points_;
@@ -57,10 +72,12 @@ private:
     bool expand_cluster(const Point_3 &target, std::vector<Point_3> &cluster);
 };
 
-bool Dbscan::save_clusters(int minsize = std::numeric_limits<int>::min()) {
+// @TODO add filesystem 
+bool Dbscan::save_clusters(std::string path, int minsize = std::numeric_limits<int>::min()) {
     std::string output_file = "";
     for (int i = 0; i < clusters_.size(); ++i) {
-        output_file = "cs/" + std::to_string(i) + "_.asc";
+        output_file = path + "/" + std::to_string(i) + "_.asc";
+        std::cout << "output_file = " << output_file << std::endl;
         std::vector<Point_3> temp = clusters_[i];
         if (temp.size() > minsize) {
             std::ofstream out(output_file);
@@ -75,7 +92,6 @@ bool Dbscan::save_clusters(int minsize = std::numeric_limits<int>::min()) {
 bool Dbscan::expand_cluster(const Point_3 &target, std::vector<Point_3> &cluster) {
     ksearch_.searchK(Eigen::Vector3f(target.x(),target.y(),target.z()), min_pts_);
     std::vector<kNeighborData> knn = ksearch_.getQuary();
-
     if (knn.size() == 1) {
         flag_[knn[0].indices] = 0;
         return false;
@@ -106,7 +122,6 @@ bool Dbscan::compute() {
 }
 
 bool Dbscan::set_input_points(std::string input_path) {
-    
     CGAL::IO::read_XYZ(input_path, points_);
     std::vector<Eigen::Vector3f> data;
     for (int i = 0; i < points_.size(); ++i) {
